@@ -1,0 +1,39 @@
+{
+  "inherits": "en_US",
+  "alphabetic": [
+    [
+      { "default": ["ㅂ"], "shifted": ["ㅃ"] },
+      { "default": ["ㅈ"], "shifted": ["ㅉ"] },
+      { "default": ["ㄷ"], "shifted": ["ㄸ"] },
+      { "default": ["ㄱ"], "shifted": ["ㄲ"] },
+      { "default": ["ㅅ"], "shifted": ["ㅆ"] },
+      { "default": ["ㅛ"], "shifted": ["ㅛ"] },
+      { "default": ["ㅕ"], "shifted": ["ㅕ"] },
+      { "default": ["ㅑ"], "shifted": ["ㅑ"] },
+      { "default": ["ㅐ"], "shifted": ["ㅒ"] },
+      { "default": ["ㅔ"], "shifted": ["ㅖ"] }
+    ],
+    [
+      { "default": ["ㅁ"], "shifted": ["ㅁ"] },
+      { "default": ["ㄴ"], "shifted": ["ㄴ"] },
+      { "default": ["ㅇ"], "shifted": ["ㅇ"] },
+      { "default": ["ㄹ"], "shifted": ["ㄹ"] },
+      { "default": ["ㅎ"], "shifted": ["ㅎ"] },
+      { "default": ["ㅗ"], "shifted": ["ㅗ"] },
+      { "default": ["ㅓ"], "shifted": ["ㅓ"] },
+      { "default": ["ㅏ"], "shifted": ["ㅏ"] },
+      { "default": ["ㅣ"], "shifted": ["ㅣ"] }
+    ],
+    [
+      { "special": "shift" },
+      { "default": ["ㅋ"], "shifted": ["ㅋ"] },
+      { "default": ["ㅌ"], "shifted": ["ㅌ"] },
+      { "default": ["ㅊ"], "shifted": ["ㅊ"] },
+      { "default": ["ㅍ"], "shifted": ["ㅍ"] },
+      { "default": ["ㅠ"], "shifted": ["ㅠ"] },
+      { "default": ["ㅜ"], "shifted": ["ㅜ"] },
+      { "default": ["ㅡ"], "shifted": ["ㅡ"] },
+      { "special": "backspace" }
+    ]
+  ]
+}

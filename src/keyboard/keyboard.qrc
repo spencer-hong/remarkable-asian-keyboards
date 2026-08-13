@@ -1,0 +1,14 @@
+<RCC>
+  <qresource prefix="/qt/qml/xofm/modules/virtualkeyboard/qml">
+    <file alias="Hangul.js">Hangul.js</file>
+  </qresource>
+  <qresource prefix="/misc/keyboards/ko_KR">
+    <file alias="keyboard_layout.json">ko_KR_keyboard_layout.json</file>
+  </qresource>
+  <qresource prefix="/misc/keyboards/ja_JP">
+    <file alias="keyboard_layout.json">ja_JP_keyboard_layout.json</file>
+  </qresource>
+  <qresource prefix="/misc/keyboards/zh_CN">
+    <file alias="keyboard_layout.json">zh_CN_keyboard_layout.json</file>
+  </qresource>
+</RCC>
