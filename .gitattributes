@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.qml text eol=lf
+*.qrc text eol=lf
+*.qrr text eol=lf
+*.json text eol=lf
+*.dat binary
+*.ttc binary
+*.zip binary
+*.gz binary

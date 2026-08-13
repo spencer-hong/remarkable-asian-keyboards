@@ -1,0 +1,13 @@
+.DS_Store
+.cache/
+build/
+dist/*
+!dist/.gitkeep
+*.swp
+*.tmp
+
+# Never commit files copied from a tablet or the reMarkable SDK installer.
+xochitl
+xochitl.*
+*-sdk.sh
+environment-setup-*

@@ -1,0 +1,321 @@
+--- a/KeyboardPanel.qml
++++ b/KeyboardPanel.qml
+@@ -1,7 +1,9 @@
+ import QtQuick
+ import xofm.modules.virtualkeyboard
++import io.codex.EastAsianIme 1.0
+ 
+ import xofm.libs.epaper as Epaper
++import "Hangul.js" as Hangul
+ 
+ Item {
+     id: root
+@@ -16,7 +18,140 @@
+     readonly property bool actionPanelEnabled: virtualKeyboard.keyboardSettings ? virtualKeyboard.keyboardSettings.actionPanelEnabled : false
+ 
+     property bool _symbolsPopupMode: false
++    property var _hangulState: Hangul.emptyState()
++    property var _imeCandidates: []
++    property bool _imeActive: false
++    readonly property bool _isEastAsianLanguage: virtualKeyboard.language === "ja_JP"
++                                                    || virtualKeyboard.language === "zh_CN"
++
++    EastAsianIme {
++        id: eastAsianIme
++    }
++
++    function updateEastAsianUi(edit) {
++        _imeCandidates = edit.candidates || [];
++        _imeActive = edit.active || false;
++    }
++
++    function scheduleEastAsianEdit(edit, rawDelta, replacement) {
++        if (!edit.handled) {
++            return false;
++        }
++        updateEastAsianUi(edit);
++        const language = virtualKeyboard.language;
++        const replacementText = replacement === undefined ? edit.replacement : replacement;
++        Qt.callLater(function() {
++            if (virtualKeyboard.language !== language) {
++                return;
++            }
++            const currentLength = Math.max(0, edit.oldLength + rawDelta);
++            virtualKeyboard.insertText(replacementText, -currentLength, currentLength);
++        });
++        return true;
++    }
++
++    function commitEastAsianNow() {
++        if (!_imeActive || !_isEastAsianLanguage) {
++            return;
++        }
++        const edit = eastAsianIme.commit(virtualKeyboard.language);
++        if (edit.handled) {
++            virtualKeyboard.insertText(edit.replacement, -edit.oldLength, edit.oldLength);
++        }
++        updateEastAsianUi(edit);
++    }
++
++    function resetEastAsianInput() {
++        updateEastAsianUi(eastAsianIme.reset());
++    }
++
++    function selectEastAsianCandidate(index) {
++        const edit = eastAsianIme.selectCandidate(virtualKeyboard.language, index);
++        scheduleEastAsianEdit(edit, 0);
++    }
++
++    function handleEastAsianKey(key, symbols) {
++        if (!eastAsianIme.supports(virtualKeyboard.language)) {
++            resetEastAsianInput();
++            return false;
++        }
++
++        if (key.type === VirtualKeyboardKey.Shift) {
++            return false;
++        }
++        if (key.type === VirtualKeyboardKey.Language) {
++            commitEastAsianNow();
++            return false;
++        }
++        if (key.type === VirtualKeyboardKey.Backspace) {
++            return scheduleEastAsianEdit(
++                eastAsianIme.backspace(virtualKeyboard.language), -1);
++        }
++        if (key.type === VirtualKeyboardKey.Space) {
++            return scheduleEastAsianEdit(
++                eastAsianIme.space(virtualKeyboard.language), 1);
++        }
++        if (key.type === VirtualKeyboardKey.Enter) {
++            commitEastAsianNow();
++            return false;
++        }
++
++        const symbol = symbols.length > 0 ? symbols[0] : "";
++        const edit = eastAsianIme.type(virtualKeyboard.language, symbol);
++        if (edit.handled) {
++            return scheduleEastAsianEdit(edit, symbol.length);
++        }
++        if (_imeActive && symbol.length > 0) {
++            const commitEdit = eastAsianIme.commit(virtualKeyboard.language);
++            return scheduleEastAsianEdit(
++                commitEdit, symbol.length, commitEdit.replacement + symbol);
++        }
++        return false;
++    }
++
++    function resetHangulComposition() {
++        _hangulState = Hangul.emptyState();
++    }
++
++    function handleHangulKey(key, symbols) {
++        if (virtualKeyboard.language !== "ko_KR") {
++            resetHangulComposition();
++            return;
++        }
++
++        if (key.type === VirtualKeyboardKey.Shift) {
++            return;
++        }
++
++        if (key.type === VirtualKeyboardKey.Backspace
++                || key.type === VirtualKeyboardKey.Language) {
++            resetHangulComposition();
++            return;
++        }
++
++        const symbol = symbols.length > 0 ? symbols[0] : "";
++        if (!Hangul.isJamo(symbol)) {
++            resetHangulComposition();
++            return;
++        }
++
++        const edit = Hangul.feed(_hangulState, symbol);
++        _hangulState = edit.state;
+ 
++        // Xochitl inserts the raw key before this queued correction. Replace
++        // that jamo, plus the active composition when needed, with NFC Hangul.
++        if (edit.replacePrevious === 0 && edit.text === symbol) {
++            return;
++        }
++        Qt.callLater(function() {
++            if (virtualKeyboard.language !== "ko_KR") {
++                return;
++            }
++            const deleteCount = edit.replacePrevious + 1;
++            virtualKeyboard.insertText(edit.text, -deleteCount, deleteCount);
++        });
++    }
++
+     signal longPressed(var key)
+     signal keyPressed(var key)
+ 
+@@ -89,6 +224,8 @@
+ 
+         onVisibleChanged: {
+             if (!visible) {
++                root.commitEastAsianNow();
++                root.resetHangulComposition();
+                 keyPopup.visible = false;
+                 languagePopup.visible = false;
+                 root._symbolsPopupMode = false;
+@@ -98,7 +235,8 @@
+         Binding {
+             target: virtualKeyboard
+             property: "topPadding"
+-            value: closeButton.visible ? closeButton.height * 1.2 : 24
++            value: candidateBar.visible ? candidateBar.height + 16
++                                        : closeButton.visible ? closeButton.height * 1.2 : 24
+         }
+ 
+         Binding {
+@@ -163,6 +301,81 @@
+                 }
+             }
+ 
++            Rectangle {
++                id: candidateBar
++                parent: virtualKeyboard
++                visible: root._isEastAsianLanguage && !root._symbolsPopupMode
++                height: 72
++                color: "black"
++                border.color: "white"
++                border.width: 1
++                z: 2
++                anchors {
++                    top: parent.top
++                    left: parent.left
++                    leftMargin: 24
++                    right: parent.right
++                    rightMargin: closeButton.visible ? closeButton.width + 84 : 24
++                }
++
++                Text {
++                    anchors.centerIn: parent
++                    visible: root._imeCandidates.length === 0
++                    text: virtualKeyboard.language === "ja_JP" ? "日本語" : "拼音"
++                    color: "white"
++                    font.pixelSize: 25
++                    font.family: virtualKeyboard.language === "ja_JP"
++                                 ? "Noto Sans CJK JP" : "Noto Sans CJK SC"
++                    antialiasing: false
++                }
++
++                Flickable {
++                    anchors.fill: parent
++                    visible: root._imeCandidates.length > 0
++                    clip: true
++                    contentWidth: candidateRow.width
++                    contentHeight: height
++                    flickableDirection: Flickable.HorizontalFlick
++
++                    Row {
++                        id: candidateRow
++                        height: parent.height
++                        spacing: 2
++
++                        Repeater {
++                            model: root._imeCandidates
++
++                            Rectangle {
++                                required property int index
++                                required property string modelData
++                                height: candidateRow.height
++                                width: Math.max(92, candidateText.implicitWidth + 48)
++                                color: candidateMouse.containsPress ? "white" : "black"
++                                border.color: "white"
++                                border.width: 1
++
++                                Text {
++                                    id: candidateText
++                                    anchors.centerIn: parent
++                                    text: modelData
++                                    color: candidateMouse.containsPress ? "black" : "white"
++                                    font.pixelSize: 30
++                                    font.family: virtualKeyboard.language === "ja_JP"
++                                                 ? "Noto Sans CJK JP" : "Noto Sans CJK SC"
++                                    antialiasing: false
++                                }
++
++                                MouseArea {
++                                    id: candidateMouse
++                                    anchors.fill: parent
++                                    onClicked: root.selectEastAsianCandidate(index)
++                                }
++                            }
++                        }
++                    }
++                }
++            }
++
+             KeyboardLanguageSelect {
+                 id: _languagePopup
+                 parent: virtualKeyboard
+@@ -187,6 +400,9 @@
+                             break;
+                         }
+                     }
++                    root.commitEastAsianNow();
++                    root.resetHangulComposition();
++                    root.resetEastAsianInput();
+                     virtualKeyboard.language = selection;
+                     visible = false;
+                     languageLabelTimer.running = true;
+@@ -247,7 +463,13 @@
+                     if (interval > minimumInterval) {
+                         interval = Math.max(minimumInterval, interval - decrement);
+                     }
+-                    virtualKeyboard.triggerBackspace();
++                    if (root._imeActive && root._isEastAsianLanguage) {
++                        const edit = eastAsianIme.backspace(virtualKeyboard.language);
++                        virtualKeyboard.triggerBackspace();
++                        root.scheduleEastAsianEdit(edit, -1);
++                    } else {
++                        virtualKeyboard.triggerBackspace();
++                    }
+                 }
+             }
+ 
+@@ -257,6 +479,9 @@
+                 function onKeyPressed(key) {
+                     root.keyPressed(key);
+ 
++                    const symbols = virtualKeyboard.shiftSelected ? key.shiftedSymbols : key.symbols;
++                    const eastAsianHandled = root.handleEastAsianKey(key, symbols);
++
+                     if (key.type === VirtualKeyboardKey.Language) {
+                         if (languagePopup.visible) {
+                             languagePopup.visible = false;
+@@ -267,7 +492,12 @@
+                     } else if (key.type === VirtualKeyboardKey.Backspace) {
+                         backspaceRepeater.start();
+                     }
+-                    const symbols = virtualKeyboard.shiftSelected ? key.shiftedSymbols : key.symbols;
++                    root.handleHangulKey(key, symbols);
++                    if (eastAsianHandled) {
++                        longPressTimer.stop();
++                        keyPopup.visible = false;
++                        return;
++                    }
+                     keyPopup.keys = symbols.slice(1); // skip first
+                     keyPopup.targetRect = key.rect;
+                     if (symbols.length > 1 || key.type === VirtualKeyboardKey.Shift) {
+@@ -285,6 +515,8 @@
+                 }
+ 
+                 function onCancelPressed() {
++                    root.commitEastAsianNow();
++                    root.resetHangulComposition();
+                     Qt.inputMethod.hide();
+                 }
+ 
+@@ -300,6 +532,8 @@
+                         return;
+                     }
+ 
++                    root.resetHangulComposition();
++                    root.commitEastAsianNow();
+                     root._symbolsPopupMode = !root._symbolsPopupMode;
+                 }
+             }
