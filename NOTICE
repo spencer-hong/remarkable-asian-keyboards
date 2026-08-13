@@ -1,0 +1,9 @@
+reMarkable East Asian Keyboard
+Copyright 2026 reMarkable East Asian Keyboard contributors
+
+This product includes OpenWnn software developed by OMRON SOFTWARE Co., Ltd.
+and PinyinIME software developed by the Android Open Source Project. Their full
+Apache License notices are included under third_party/ and in release archives.
+
+Release archives also include XOVI, rm-xovi-extensions, and Noto Sans CJK under
+their respective licenses documented in THIRD_PARTY.md.
