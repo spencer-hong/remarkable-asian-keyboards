@@ -1,0 +1,20 @@
+name: checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install checks
+        run: sudo apt-get update && sudo apt-get install -y ripgrep shellcheck
+      - name: Shellcheck
+        run: shellcheck --severity=warning packaging/*.sh scripts/*.sh
+      - name: Project checks
+        run: make check
